@@ -49,5 +49,7 @@ tj:
     database: tj_message
   sms:
     ali:
+      #accessId: ${ALIBABA_ACCESS_ID}
       accessId: ${ALIBABA_ACCESS_ID}
+      #accessSecret: ${ALIBABA_ACCESS_SECRET}
       accessSecret: ${ALIBABA_ACCESS_SECRET}

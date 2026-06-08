@@ -45,7 +45,9 @@ tj:
     media: TENCENT
   tencent:
     appId: 1312394356
+    #secretId: ${TENCENT_SECRET_ID}
     secretId: ${TENCENT_SECRET_ID}
+    #secretKey: ${TENCENT_SECRET_KEY}
     secretKey: ${TENCENT_SECRET_KEY}
     vod:
       enable: true
