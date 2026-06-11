@@ -64,7 +64,7 @@ public class LearningLessonServiceImpl extends ServiceImpl<LearningLessonMapper,
             LocalDateTime now = LocalDateTime.now();
             lesson.setCreateTime(now); //课程的开始时间
 
-            if (validDuration != null || validDuration > 0){ //需要判断该课程是否有过期时间
+            if (validDuration != null && validDuration > 0){ //需要判断该课程是否有过期时间
                 //2.3计算课程的过期时间
                 lesson.setExpireTime(now.plusMonths(validDuration));
             }
