@@ -4,6 +4,7 @@ package com.tianji.learning.mq;
 import com.tianji.api.dto.trade.OrderBasicDTO;
 import com.tianji.common.constants.MqConstants;
 import com.tianji.common.utils.CollUtils;
+import com.tianji.learning.domain.po.LearningLesson;
 import com.tianji.learning.service.ILearningLessonService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,10 @@ import org.springframework.amqp.rabbit.annotation.Queue;
 import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -35,14 +40,46 @@ public class LessonChangeListener {
             return;
         }
 
-        //2.此时接收到正确的MQ消息,此时进行课程的添加
-        //根据userId和courseIds进行课程添加
+        //2.对收集到的消息进行去重处理,拿到消息中的课程id
+        List<Long> courseIds = order.getCourseIds().stream()
+                //distinct() 表示去重
+                .distinct()
+                .collect(Collectors.toList());
 
+        //3.查询当前用户课表中已存在的课程id
+        Set<Long> existCourseIds = lessonService.lambdaQuery()
+                //只查询 course_id字段,不查询整行数据
+                .select(LearningLesson::getCourseId)
+                //条件1.查询当前用户
+                .eq(LearningLesson::getUserId, order.getUserId())
+                //条件2.只查本次订单包含的课程
+                .in(LearningLesson::getCourseId, courseIds)
+                //执行查询,返回LearningLesson对象的集合,同时转换成stream流
+                .list().stream()
+                //从LearningLesson对象的集合中去除courseId,并转换成set
+                .map(LearningLesson::getCourseId).collect(Collectors.toSet());
+
+        //过滤已存在的课程id,只保留课表中还不存在的课程id
+        courseIds = courseIds.stream()
+                //如果课表中还不存在当前courseId,表明可以添加
+                .filter(courseId -> !existCourseIds.contains(courseId))
+                //把过滤后的id信息重新收集成list集合
+                .collect(Collectors.toList());
+
+        //如果过滤后courseIds为空,表明这条mq消息是重复消息
+        if (CollUtils.isEmpty(courseIds)){
+            log.info("订单{}重复消费,用户{}的课程{}已经添加到课表中,无需重复处理.",
+                    order.getOrderId(), order.getUserId(), order.getCourseIds());
+            return;
+        }
+
+        //4.此时接收到正确的MQ消息,此时进行课程的添加
+        //根据userId和courseIds进行课程添加
         //日志记录
         log.debug("监听到用户{}的订单{}, 需要添加{}到课表中.",
                 order.getUserId(), order.getOrderId(), order.getCourseIds());
-
-        lessonService.addUserLessons(order.getUserId(), order.getCourseIds());
+        //此时要使用过滤后的courseIds
+        lessonService.addUserLessons(order.getUserId(), courseIds);
 
 
     }
