@@ -34,12 +34,14 @@ public class LessonChangeListener {
     ))
     public void listenLessonPay(OrderBasicDTO order){
         //1.先做健壮性处理,判断是否为空
-        //todo 需要做幂等处理
         if (order == null || order.getOrderId() == null || CollUtils.isEmpty(order.getCourseIds())){
             log.error("MQ消息有误,订单数据为空!");
             return;
         }
 
+        /**
+         * 幂等处理
+         */
         //2.对收集到的消息进行去重处理,拿到消息中的课程id
         List<Long> courseIds = order.getCourseIds().stream()
                 //distinct() 表示去重
