@@ -83,7 +83,27 @@ public class LessonChangeListener {
         //此时要使用过滤后的courseIds
         lessonService.addUserLessons(order.getUserId(), courseIds);
 
+    }
 
+
+    //监听用户退款是否成功
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(value = "learning.lesson.refund.queue", durable = "true"),
+            exchange = @Exchange(name = MqConstants.Exchange.ORDER_EXCHANGE, type = ExchangeTypes.TOPIC),
+            key = MqConstants.Key.ORDER_REFUND_KEY
+    ))
+    public void listenCourseRefund(OrderBasicDTO order){
+        //此处不需要做幂等,deleteCourseFromLesson中的删除操作天然幂等
+
+        //健壮性判断
+        if (order == null || order.getOrderId() == null || order.getUserId() == null || CollUtils.isEmpty(order.getCourseIds())){
+            log.error("MQ消息有误,数据为空!");
+            return;
+        }
+
+        //调用删除方法,这里需要主动传当前用户信息,因为这不是用户主动删除的.
+        lessonService.deleteCourseFromLesson(order.getUserId(), order.getCourseIds().get(0));
+        log.debug("已成功删除用户{}订单号为{}的订单", order.getUserId(), order.getOrderId());
     }
 
 }

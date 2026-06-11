@@ -1,5 +1,7 @@
 package com.tianji.learning.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tianji.api.client.course.CourseClient;
 import com.tianji.api.dto.course.CourseSimpleInfoDTO;
@@ -11,6 +13,7 @@ import com.tianji.common.utils.CollUtils;
 import com.tianji.common.utils.UserContext;
 import com.tianji.learning.domain.po.LearningLesson;
 import com.tianji.learning.domain.vo.LearningLessonVO;
+import com.tianji.learning.enums.LessonStatus;
 import com.tianji.learning.mapper.LearningLessonMapper;
 import com.tianji.learning.service.ILearningLessonService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -19,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Wrapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,8 +45,11 @@ public class LearningLessonServiceImpl extends ServiceImpl<LearningLessonMapper,
 
     private final CourseClient courseClient;
 
+    /**
+     * 批量处理数据
+     */
     @Override
-    @Transactional //批量处理数据
+    @Transactional
     public void addUserLessons(Long userId, List<Long> courseIds) {
 
         //1.首先需要根据课程id拿到课程数据信息
@@ -79,6 +86,9 @@ public class LearningLessonServiceImpl extends ServiceImpl<LearningLessonMapper,
         saveBatch(list);
     }
 
+    /**
+     * 分页查询课程数据
+     */
     @Override
     public PageDTO<LearningLessonVO> queryMyLessons(PageQuery query) {
 
@@ -139,6 +149,94 @@ public class LearningLessonServiceImpl extends ServiceImpl<LearningLessonMapper,
         }
 
         return new PageDTO<>(page.getTotal(), page.getPages(), list);
+    }
+
+    /**
+     * 根据课程id查询课程状态
+     * 需要根据用户id和课程id来进行确认.一个用户可以有多个课程,一个课程可被多个用户购买
+     */
+    @Override
+    public LearningLessonVO queryLessonStatusByCourseId(Long courseId) {
+        //拿到用户信息
+        Long userId = UserContext.getUser();
+        LearningLesson lesson = lambdaQuery()
+                //条件1,根据用户id判断
+                .eq(LearningLesson::getUserId, userId)
+                .eq(LearningLesson::getCourseId, courseId)
+                .one();
+        if (lesson == null){
+            return null;
+        }
+
+        //将LearningLesson对象lesson转换成VO对象,并返回
+        return BeanUtils.copyBean(lesson, LearningLessonVO.class);
+    }
+
+    /**
+     * 根据课程id删除当前用户的指定课程
+     * @param userId
+     * @param courseId
+     */
+    @Override
+    public void deleteCourseFromLesson(Long userId , Long courseId) {
+        if (userId == null){
+            //如果controller传入的是null,说明是用户主动删除的
+            //从threadlocal中获取用户信息
+            userId = UserContext.getUser();
+        }
+
+        //根据条件删除用户指定的课程
+        remove(Wrappers.<LearningLesson>lambdaQuery()
+                .eq(LearningLesson::getUserId, userId)
+                .eq(LearningLesson::getCourseId, courseId));
+
+    }
+
+    /**
+     * 校验指定课程是否是课表中的有效数据
+     * @param courseId
+     * @return
+     */
+    @Override
+    public Long isLessonValid(Long courseId) {
+        //拿到用户信息
+        Long userId = UserContext.getUser();
+
+        //查询得到当前用户的课表
+        LearningLesson lesson = lambdaQuery()
+                .eq(LearningLesson::getUserId, userId)
+                .eq(LearningLesson::getCourseId, courseId).one();
+
+        if (lesson == null){
+            return null;
+        }
+
+        //判断是否过期
+        LocalDateTime expireTime = lesson.getExpireTime();
+        LocalDateTime now = LocalDateTime.now();
+
+        if (expireTime != null && now.isAfter(expireTime)){
+            //证明过期
+            return null;
+        }
+
+        return lesson.getId();
+    }
+
+    /**
+     * 统计该课程的学习人数
+     * @param courseId
+     * @return
+     */
+    @Override
+    public Integer countLearningPersonByCourse(Long courseId) {
+        return lambdaQuery()
+                .eq(LearningLesson::getCourseId, courseId)
+                .in(LearningLesson::getStatus,
+                        LessonStatus.NOT_BEGIN.getValue(),
+                        LessonStatus.LEARNING.getValue(),
+                        LessonStatus.FINISHED.getValue())
+                .count();
     }
 
 }
