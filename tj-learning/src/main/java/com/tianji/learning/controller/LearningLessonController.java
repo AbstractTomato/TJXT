@@ -3,12 +3,18 @@ package com.tianji.learning.controller;
 
 import com.tianji.common.domain.dto.PageDTO;
 import com.tianji.common.domain.query.PageQuery;
+import com.tianji.learning.domain.dto.LearningPlanDTO;
+import com.tianji.learning.domain.po.LearningLesson;
 import com.tianji.learning.domain.vo.LearningLessonVO;
+import com.tianji.learning.domain.vo.LearningPlanPageVO;
 import com.tianji.learning.service.ILearningLessonService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
+import org.bouncycastle.voms.VOMSAttribute;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
 
 
 /**
@@ -78,5 +84,28 @@ public class LearningLessonController {
     @GetMapping("/{courseId}/count")
     public Integer countLearningPersonByCourse(@PathVariable("courseId") Long courseId){
         return lessonService.countLearningPersonByCourse(courseId);
+    }
+
+
+
+    /**
+     * 创建学习计划
+     * @param planDTO
+     */
+    @PostMapping("/plans")
+    @ApiOperation("创建学习计划")
+    public void createLearningPlans(@RequestBody @Valid LearningPlanDTO planDTO){
+        lessonService.createLearningPlans(planDTO.getCourseId(), planDTO.getFreq());
+    }
+
+    /**
+     * 查询学习计划
+     * @param query
+     * @return
+     */
+    @ApiOperation("查询学习计划")
+    @PostMapping("/plans")
+    public LearningPlanPageVO queryMyPlans(PageQuery query){
+        return lessonService.queryMyPlans(query);
     }
 }
