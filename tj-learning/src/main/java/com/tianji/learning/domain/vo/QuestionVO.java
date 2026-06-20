@@ -15,6 +15,9 @@ public class QuestionVO {
     @ApiModelProperty("互动问题名称")
     private String title;
 
+    @ApiModelProperty("互动问题描述")
+    private String description ;
+
     @ApiModelProperty("回答数量，0表示没有回答")
     private Integer answerTimes;
 

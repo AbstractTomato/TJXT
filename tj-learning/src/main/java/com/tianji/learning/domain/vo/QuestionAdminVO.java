@@ -1,5 +1,6 @@
 package com.tianji.learning.domain.vo;
 
+import com.tianji.learning.enums.QuestionStatus;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -20,7 +21,7 @@ public class QuestionAdminVO {
     @ApiModelProperty(value = "创建时间", example = "2022-7-18 19:52:36")
     private LocalDateTime createTime;
     @ApiModelProperty("管理端问题状态：0-未查看，1-已查看")
-    private Integer status;
+    private QuestionStatus status;
     @ApiModelProperty("是否被隐藏")
     private Boolean hidden;
 
@@ -36,6 +37,8 @@ public class QuestionAdminVO {
     private String sectionName;
     @ApiModelProperty("三级分类名称，中间使用/隔开")
     private String categoryName;
+    @ApiModelProperty("教师名称")
+    private String teacherName;
 }
 
 

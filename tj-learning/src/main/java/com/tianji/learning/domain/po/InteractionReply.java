@@ -13,7 +13,6 @@ import lombok.experimental.Accessors;
  * <p>
  * 互动问题的回答或评论
  * </p>
- *
  * @author Sh1nley
  * @since 2026-06-16
  */

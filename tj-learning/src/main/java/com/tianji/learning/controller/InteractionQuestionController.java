@@ -9,11 +9,9 @@ import com.tianji.learning.service.IInteractionQuestionService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
-import org.springframework.web.bind.annotation.RestController;
+import javax.validation.Valid;
 
 /**
  * <p>
@@ -38,7 +36,7 @@ public class InteractionQuestionController {
      */
     @PostMapping
     @ApiOperation("新增一个互动问题")
-    public void newQuestion(QuestionFormDTO questionDTO){
+    public void newQuestion(@RequestBody @Valid QuestionFormDTO questionDTO){
         questionService.newQuestion(questionDTO);
     }
 
@@ -51,5 +49,17 @@ public class InteractionQuestionController {
     @ApiOperation("分页查询互动问题")
     public PageDTO<QuestionVO> queryQuestionPage(QuestionPageQuery query){
         return questionService.queryQuestionPage(query);
+    }
+
+
+    /**
+     * 根据id查询互动问题
+     * @param id
+     * @return
+     */
+    @GetMapping("{id}")
+    @ApiOperation("根据id查询互动问题")
+    public QuestionVO queryQuestionById(@PathVariable("id") Long id){
+        return questionService.queryQuestionById(id);
     }
 }

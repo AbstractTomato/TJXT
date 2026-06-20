@@ -4,7 +4,9 @@ import com.tianji.common.domain.dto.PageDTO;
 import com.tianji.learning.domain.dto.QuestionFormDTO;
 import com.tianji.learning.domain.po.InteractionQuestion;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.tianji.learning.domain.query.QuestionAdminPageQuery;
 import com.tianji.learning.domain.query.QuestionPageQuery;
+import com.tianji.learning.domain.vo.QuestionAdminVO;
 import com.tianji.learning.domain.vo.QuestionVO;
 
 /**
@@ -22,4 +24,16 @@ public interface IInteractionQuestionService extends IService<InteractionQuestio
 
     //分页查询互动问题
     PageDTO<QuestionVO> queryQuestionPage(QuestionPageQuery query);
+
+    //根据id查询互动问题
+    QuestionVO queryQuestionById(Long id);
+
+    //管理端分页查询互动问题
+    PageDTO<QuestionAdminVO> queryQuestionPageAdmin(QuestionAdminPageQuery query);
+
+    //管理端隐藏或显示问题
+    void hiddenQuestionAdmin(Long id, Boolean hidden);
+
+    //管理端根据id查询问题详情
+    QuestionAdminVO queryQuestionAdminVOById(Long id);
 }
