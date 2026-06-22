@@ -23,4 +23,7 @@ public interface ILikedRecordService extends IService<LikedRecord> {
 
     //查询指定业务id的点赞状态
     Set<Long> isBizLiked(List<Long> bizIds);
+
+    //从redis中读取某一种业务类型的点赞数量变化,然后批量发送MQ
+    void readLikedTimesAndSendMessage(String bizType, int maxBizSize);
 }

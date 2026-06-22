@@ -1,7 +1,7 @@
 package com.tianji.remark.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.tianji.api.dto.remark.LikeTimesDTO;
+import com.tianji.api.dto.remark.LikedTimesDTO;
 import com.tianji.common.autoconfigure.mq.RabbitMqHelper;
 import com.tianji.common.utils.BeanUtils;
 import com.tianji.common.utils.StringUtils;
@@ -31,7 +31,7 @@ import static com.tianji.common.constants.MqConstants.Key.LIKED_TIMES_KEY_TEMPLA
  * @author Sh1nley
  * @since 2026-06-21
  */
-@Service
+//@Service
 @RequiredArgsConstructor
 public class LikedRecordServiceImpl extends ServiceImpl<LikedRecordMapper, LikedRecord> implements ILikedRecordService {
 
@@ -64,7 +64,7 @@ public class LikedRecordServiceImpl extends ServiceImpl<LikedRecordMapper, Liked
                 //routing key
                 StringUtils.format(LIKED_TIMES_KEY_TEMPLATE, recordFormDTO.getBizType()),
                 //消息体,为了方便监听拿消息,构建一个对象
-                LikeTimesDTO.of(recordFormDTO.getBizId(), likeTimes)
+                List.of(LikedTimesDTO.of(recordFormDTO.getBizId(), likeTimes))
         );
 
     }
@@ -82,6 +82,11 @@ public class LikedRecordServiceImpl extends ServiceImpl<LikedRecordMapper, Liked
 
         //3.返回结果
         return list.stream().map(LikedRecord::getBizId).collect(Collectors.toSet());
+    }
+
+    @Override
+    public void readLikedTimesAndSendMessage(String bizType, int maxBizSize) {
+
     }
 
     private boolean unlike(LikeRecordFormDTO recordFormDTO) {
