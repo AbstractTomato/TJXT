@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.core.metadata.OrderItem;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tianji.api.client.user.UserClient;
 import com.tianji.api.dto.user.UserDTO;
+import com.tianji.common.autoconfigure.mq.RabbitMqHelper;
 import com.tianji.common.constants.Constant;
+import com.tianji.common.constants.MqConstants;
 import com.tianji.common.domain.dto.PageDTO;
 import com.tianji.common.exceptions.BadRequestException;
 import com.tianji.common.utils.BeanUtils;
+import com.tianji.common.utils.BooleanUtils;
 import com.tianji.common.utils.CollUtils;
 import com.tianji.common.utils.UserContext;
 import com.tianji.learning.domain.dto.ReplyDTO;
@@ -18,9 +21,11 @@ import com.tianji.learning.domain.vo.ReplyVO;
 import com.tianji.learning.enums.QuestionStatus;
 import com.tianji.learning.mapper.InteractionQuestionMapper;
 import com.tianji.learning.mapper.InteractionReplyMapper;
+import com.tianji.learning.mq.message.SignInMessage;
 import com.tianji.learning.service.IInteractionReplyService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -43,6 +48,7 @@ public class InteractionReplyServiceImpl extends ServiceImpl<InteractionReplyMap
 
     private final InteractionQuestionMapper questionMapper;
     private final UserClient userClient;
+    private final RabbitMqHelper mqHelper;
 
     /**
      * 新增回答或评论
@@ -99,6 +105,15 @@ public class InteractionReplyServiceImpl extends ServiceImpl<InteractionReplyMap
 
         //更新问题
         questionMapper.updateById(question);
+
+        //用户回答问题之后,发送获取积分的消息
+        if (BooleanUtils.isTrue(dto.getIsStudent()) && dto.getAnswerId() == null){
+            mqHelper.send(
+                    MqConstants.Exchange.LEARNING_EXCHANGE,
+                    MqConstants.Key.WRITE_REPLY,
+                    SignInMessage.of(userId, 5)
+            );
+        }
     }
 
     /**
