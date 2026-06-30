@@ -36,8 +36,12 @@ public class DateUtils extends LocalDateTimeUtil {
     public static final long MAX_3_MONTH_DAY = 90L;
     public static final long MAX_YEAR_DAY = 365L;
 
+    //签到
     public static final DateTimeFormatter SIGN_DATE_SUFFIX_FORMATTER =
             DateTimeFormatter.ofPattern(":yyyyMM");
+    //排行榜
+    public static final DateTimeFormatter POINTS_BOARD_SUFFIX_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMM");
 
     public static final String TIME_ZONE_8 = "GMT+8";
 
