@@ -3,6 +3,7 @@ package com.tianji.learning.controller;
 
 import com.tianji.learning.domain.query.PointsBoardQuery;
 import com.tianji.learning.domain.vo.PointsBoardVO;
+import com.tianji.learning.service.IPointsBoardService;
 import com.tianji.learning.service.IPointsRecordService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Api(tags = "积分排行榜相关接口")
 public class PointsBoardController {
-    private final IPointsRecordService recordService;
+    private final IPointsBoardService boardService;
 
     /**
      * 根据赛季查询积分榜
@@ -35,6 +36,6 @@ public class PointsBoardController {
     @GetMapping
     @ApiOperation("根据赛季查询积分榜")
     public PointsBoardVO queryPointsBoardBySeason(PointsBoardQuery query){
-        return recordService.queryPointsBoardBySeason(query);
+        return boardService.queryPointsBoardBySeason(query);
     }
 }

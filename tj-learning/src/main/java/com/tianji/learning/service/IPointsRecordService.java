@@ -25,6 +25,4 @@ public interface IPointsRecordService extends IService<PointsRecord> {
     //查询当日积分获取情况
     List<PointsStatisticsVO> queryMyPointsToday();
 
-    //根据赛季查询积分榜
-    PointsBoardVO queryPointsBoardBySeason(PointsBoardQuery query);
 }
