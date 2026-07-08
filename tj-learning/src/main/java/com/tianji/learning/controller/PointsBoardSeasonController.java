@@ -23,7 +23,7 @@ import java.util.List;
  * @since 2026-06-29
  */
 @RestController
-@RequestMapping("/boards_season")
+@RequestMapping("/boards/seasons")
 @RequiredArgsConstructor
 @Api(tags = "赛季相关接口")
 public class PointsBoardSeasonController {
