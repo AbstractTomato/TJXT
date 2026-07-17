@@ -2,6 +2,7 @@ package com.tianji.promotion.mapper;
 
 import com.tianji.promotion.domain.po.Coupon;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 
 /**
@@ -15,6 +16,6 @@ import org.apache.ibatis.annotations.Update;
 public interface CouponMapper extends BaseMapper<Coupon> {
 
     //将优惠券表已发行的数量+1
-    @Update("UPDATE coupon SET issue_num = issue_num + 1 WHERE id = #{couponId}")
-    void incrIssueNum(Long couponId);
+    @Update("UPDATE coupon SET issue_num = issue_num + 1 WHERE id = #{couponId} AND issue_num < total_num")
+    int incrIssueNum(@Param("couponId") Long couponId);
 }

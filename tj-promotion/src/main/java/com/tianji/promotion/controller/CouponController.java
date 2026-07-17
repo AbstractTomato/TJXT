@@ -11,6 +11,7 @@ import com.tianji.promotion.domain.vo.CouponVO;
 import com.tianji.promotion.service.ICouponService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration;
 import org.springframework.web.bind.annotation.*;
@@ -72,6 +73,16 @@ public class CouponController {
     @ApiOperation("删除优惠券")
     public void deleteCouponById(@PathVariable Long id){
         couponService.deleteCouponById(id);
+    }
+
+    /**
+     * 暂停发放优惠券
+     * @param id
+     */
+    @ApiOperation("暂停发放优惠券")
+    @PutMapping("/{id}/pause")
+    public void pauseIssueCouponById(@ApiParam("优惠券id") @PathVariable Long id){
+        couponService.pauseIssueCouponById(id);
     }
 
     /**

@@ -1,0 +1,44 @@
+server:
+  port: 8100
+  tomcat:
+    uri-encoding: UTF-8
+spring:
+  application:
+    name: agent-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+      config:
+        server-addr: 127.0.0.1:8848
+        file-extension: yaml
+        shared-configs:
+          - data-id: shared-spring.yaml
+            refresh: false
+          - data-id: shared-redis.yaml
+            refresh: false
+          - data-id: shared-mybatis.yaml
+            refresh: false
+          - data-id: shared-logs.yaml
+            refresh: false
+          - data-id: shared-feign.yaml
+            refresh: false
+          - data-id: shared-mq.yaml
+            refresh: false
+          - data-id: shared-xxljob.yaml
+            refresh: false
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/tj_agent?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+tj:
+  agent:
+    llm:
+      base-url: https://api.deepseek.com
+      api-key: ${DEEPSEEK_API_KEY:your-api-key-here}
+      model-name: deepseek-v4-pro
+      temperature: 0.3
+      max-tokens: 2048
+      timeout: 60

@@ -7,14 +7,13 @@ import com.tianji.api.cache.CategoryCache;
 import com.tianji.common.domain.dto.PageDTO;
 import com.tianji.common.exceptions.BadRequestException;
 import com.tianji.common.exceptions.BizIllegalException;
-import com.tianji.common.utils.BeanUtils;
-import com.tianji.common.utils.CollUtils;
-import com.tianji.common.utils.StringUtils;
-import com.tianji.common.utils.UserContext;
+import com.tianji.common.utils.*;
+import com.tianji.promotion.constants.PromotionConstants;
 import com.tianji.promotion.domain.dto.CouponFormDTO;
 import com.tianji.promotion.domain.dto.CouponIssueFormDTO;
 import com.tianji.promotion.domain.po.Coupon;
 import com.tianji.promotion.domain.po.CouponScope;
+import com.tianji.promotion.domain.po.ExchangeCode;
 import com.tianji.promotion.domain.po.UserCoupon;
 import com.tianji.promotion.domain.query.CouponQuery;
 import com.tianji.promotion.domain.vo.CouponDetailVO;
@@ -22,6 +21,7 @@ import com.tianji.promotion.domain.vo.CouponPageVO;
 import com.tianji.promotion.domain.vo.CouponScopeVO;
 import com.tianji.promotion.domain.vo.CouponVO;
 import com.tianji.promotion.enums.CouponStatus;
+import com.tianji.promotion.enums.ExchangeCodeStatus;
 import com.tianji.promotion.enums.ObtainType;
 import com.tianji.promotion.enums.UserCouponStatus;
 import com.tianji.promotion.mapper.CouponMapper;
@@ -32,11 +32,13 @@ import com.tianji.promotion.service.IExchangeCodeService;
 import com.tianji.promotion.service.IUserCouponService;
 import lombok.RequiredArgsConstructor;
 import org.codehaus.groovy.classgen.FinalVariableAnalyzer;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -57,6 +59,7 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
     private final CategoryCache categoryCache;
     private final IExchangeCodeService exchangeCodeService;
     private final IUserCouponService userCouponService;
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * 新增优惠券接口
@@ -219,7 +222,7 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         LocalDateTime issueBeginTime = coupon.getIssueBeginTime();
         LocalDateTime now = LocalDateTime.now();
 
-        boolean isBegin = issueBeginTime == null || !now.isAfter(issueBeginTime);
+        boolean isBegin = issueBeginTime == null || !now.isBefore(issueBeginTime);
 
         //3.更新优惠券
         Coupon couponPO = BeanUtils.copyBean(dto, Coupon.class);
@@ -235,6 +238,13 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         //4.更新数据库
         updateById(couponPO);
 
+        //添加缓存
+        if (isBegin){
+            coupon.setIssueBeginTime(couponPO.getIssueBeginTime());
+            coupon.setIssueEndTime(couponPO.getIssueEndTime());
+            cacheCouponInfo(coupon);
+        }
+
         //5.判断是否需要生成兑换码
         //只有待发放状态和手动兑换的优惠券才能生成兑换码
         if (coupon.getObtainWay() == ObtainType.ISSUE && coupon.getStatus() == CouponStatus.DRAFT){
@@ -243,6 +253,19 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
             coupon.setIssueEndTime(couponPO.getIssueEndTime());
             exchangeCodeService.asyncGenerateExchangeCode(coupon);
         }
+    }
+
+    /**
+     * 将优惠券的信息添加到缓存中
+     */
+    private void cacheCouponInfo(Coupon coupon) {
+        Map<String, String> map = new HashMap<>(4);
+        map.put("issueBeginTime", String.valueOf(DateUtils.toEpochMilli(coupon.getIssueBeginTime())));
+        map.put("issueEndTime", String.valueOf(DateUtils.toEpochMilli(coupon.getIssueEndTime())));
+        map.put("totalNum", String.valueOf(coupon.getTotalNum()));
+        map.put("userLimit", String.valueOf(coupon.getUserLimit()));
+
+        redisTemplate.opsForHash().putAll(PromotionConstants.COUPON_CACHE_KEY_PREFIX + coupon.getId(), map);
     }
 
     /**
@@ -290,6 +313,110 @@ public class CouponServiceImpl extends ServiceImpl<CouponMapper, Coupon> impleme
         }
 
         return couponVOS;
+    }
+
+    /**
+     *暂停发放优惠券
+     * @param id
+     */
+    @Override
+    @Transactional
+    public void pauseIssueCouponById(Long id) {
+        //根据id查询优惠券
+        Coupon coupon = getById(id);
+        if (coupon == null){
+            throw new BizIllegalException("优惠券不存在!");
+        }
+
+        //只有发放中和未开始的优惠券才能被暂停
+        if (coupon.getStatus() != CouponStatus.UN_ISSUE && coupon.getStatus() != CouponStatus.ISSUING){
+            throw new BizIllegalException("只有发放中和未开始的优惠券才能被暂停");
+        }
+        //更新优惠券的状态为暂停
+        boolean success = this.lambdaUpdate()
+                .eq(Coupon::getId, id)
+                .in(Coupon::getStatus, CouponStatus.UN_ISSUE, CouponStatus.ISSUING)
+                .set(Coupon::getStatus, CouponStatus.PAUSE)
+                .update();
+        if (!success){
+            throw new BizIllegalException("更新失败!");
+        }
+
+        //删除redis中的缓存
+        redisTemplate.delete(PromotionConstants.COUPON_CACHE_KEY_PREFIX + id);
+    }
+
+    /**
+     * 定时任务：将到达发放开始时间的优惠券状态从 UN_ISSUE 更新为 ISSUING
+     */
+    @Override
+    @Transactional
+    public void checkAndIssueCoupons() {
+        //查询所有"未开始"且"开始时间已到"的优惠券
+        List<Coupon> coupons = this.lambdaQuery()
+                .eq(Coupon::getStatus, CouponStatus.UN_ISSUE)
+                .le(Coupon::getIssueBeginTime, LocalDateTime.now())
+                .list();
+
+        if (CollUtils.isEmpty(coupons)){
+            return;
+        }
+
+        //转换成id
+        List<Long> couponIds = coupons.stream().map(Coupon::getId).collect(Collectors.toList());
+
+        //批量更新
+        boolean success = this.lambdaUpdate()
+                .eq(Coupon::getStatus, CouponStatus.UN_ISSUE)
+                .set(Coupon::getStatus, CouponStatus.ISSUING)
+                .in(Coupon::getId, couponIds)
+                .update();
+
+        if (!success){
+            throw new BizIllegalException("发放失败!");
+        }
+
+        //写入缓存
+        coupons.forEach(this::cacheCouponInfo);
+    }
+
+    /**
+     * 定时任务：将到达发放结束时间的优惠券状态从 ISSUING 更新为 FINISHED
+     */
+    @Override
+    @Transactional
+    public void checkAndFinishCoupons() {
+        List<Coupon> coupons = this.lambdaQuery()
+                .eq(Coupon::getStatus, CouponStatus.ISSUING)
+                .le(Coupon::getIssueEndTime, LocalDateTime.now())
+                .list();
+        if (CollUtils.isEmpty(coupons)){
+            return;
+        }
+
+        List<Long> couponIds = coupons.stream().map(Coupon::getId).collect(Collectors.toList());
+
+        boolean success = this.lambdaUpdate()
+                .eq(Coupon::getStatus, CouponStatus.ISSUING)
+                .set(Coupon::getStatus, CouponStatus.FINISHED)
+                .in(Coupon::getId, couponIds)
+                .update();
+
+        if (!success){
+            throw new BizIllegalException("结束发放失败!");
+        }
+
+        // 批量将未使用的兑换码标记为过期
+        couponIds.forEach(couponId -> {
+            exchangeCodeService.lambdaUpdate()
+                    .set(ExchangeCode::getStatus, ExchangeCodeStatus.EXPIRED)
+                    .eq(ExchangeCode::getExchangeTargetId, couponId)
+                    .eq(ExchangeCode::getStatus, ExchangeCodeStatus.UNUSED)
+                    .update();
+        });
+
+        //清理redis缓存
+        couponIds.forEach(id -> redisTemplate.delete(PromotionConstants.COUPON_CACHE_KEY_PREFIX + id));
     }
 
     /**

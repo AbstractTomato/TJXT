@@ -1,6 +1,8 @@
 package com.tianji.promotion.config;
 
+import com.tianji.promotion.utils.MyLockAspect;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,4 +37,10 @@ public class PromotionConfig implements AsyncConfigurer {
             log.info("异步执行异常, method={}", method.getName(), ex);
         };
     }
+
+    /*
+    @Bean
+    public MyLockAspect myLockAspect(RedissonClient redissonClient){
+        return new MyLockAspect(redissonClient);
+    }*/
 }

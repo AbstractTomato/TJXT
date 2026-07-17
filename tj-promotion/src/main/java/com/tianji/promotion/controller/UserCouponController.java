@@ -44,7 +44,7 @@ public class UserCouponController {
      */
     @PostMapping("/{code}/exchange")
     @ApiOperation("兑换码兑换优惠券")
-    public void exchangeCoupon(@PathVariable("code") String code){
+    public void exchangeCoupon(@PathVariable("code") String code) throws InterruptedException {
         userCouponService.exchangeCoupon(code);
     }
 }

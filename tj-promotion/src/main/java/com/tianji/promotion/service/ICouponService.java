@@ -44,4 +44,16 @@ public interface ICouponService extends IService<Coupon> {
     //查询正在发放中的,手动领取的优惠券
     List<CouponVO> queryIssuingCoupon();
 
+    //暂停发放优惠券
+    void pauseIssueCouponById(Long id);
+
+    /**
+     * 定时任务：将到达发放开始时间的优惠券状态从 UN_ISSUE 更新为 ISSUING
+     */
+    void checkAndIssueCoupons();
+
+    /**
+     * 定时任务：将到达发放结束时间的优惠券状态从 ISSUING 更新为 FINISHED
+     */
+    void checkAndFinishCoupons();
 }

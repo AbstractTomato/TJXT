@@ -324,7 +324,7 @@ public class InteractionQuestionServiceImpl extends ServiceImpl<InteractionQuest
                 .update();
 
         //4.如果更新失败,抛异常
-        if (!success && !update){
+        if (!success || !update){
             throw new BadRequestException("更新问题显示状态失败!");
         }
     }
