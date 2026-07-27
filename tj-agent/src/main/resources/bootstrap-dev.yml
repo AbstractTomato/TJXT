@@ -5,17 +5,20 @@ server:
 spring:
   application:
     name: agent-service
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8848
+        server-addr: 192.168.150.101:8848
+        register-enabled: false
+        fail-fast: false
       config:
-        server-addr: 127.0.0.1:8848
+        server-addr: 192.168.150.101:8848
         file-extension: yaml
         shared-configs:
           - data-id: shared-spring.yaml
-            refresh: false
-          - data-id: shared-redis.yaml
             refresh: false
           - data-id: shared-mybatis.yaml
             refresh: false
@@ -27,11 +30,22 @@ spring:
             refresh: false
           - data-id: shared-xxljob.yaml
             refresh: false
+    openfeign:
+      client:
+        config:
+          learning-service:
+            url: http://learning-service:8090
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/tj_agent?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    url: jdbc:mysql://192.168.150.101:3306/tj_agent?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
     username: root
-    password: root
+    password: 123
     driver-class-name: com.mysql.cj.jdbc.Driver
+  redis:
+    host: redis
+    port: 6379
+    password: 123321
+  elasticsearch:
+    uris: http://es:9200
 
 tj:
   agent:
@@ -42,3 +56,5 @@ tj:
       temperature: 0.3
       max-tokens: 2048
       timeout: 60
+    sync:
+      course-ids: 1,2,3

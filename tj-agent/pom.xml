@@ -12,8 +12,8 @@
     <artifactId>tj-agent</artifactId>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <langchain4j.version>0.36.2</langchain4j.version>
     </properties>
@@ -87,9 +87,11 @@
         </dependency>
 
         <!-- ============ LangChain4j — LLM 框架 ============ -->
+        <!-- 注意：不使用 langchain4j-spring-boot-starter（与 Spring Boot 2.7 不兼容），手动配置 Bean -->
+        <!-- LangChain4j 核心库（langchain4j-open-ai 已传递引入） -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-spring-boot-starter</artifactId>
+            <artifactId>langchain4j-core</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
         <!-- OpenAI 兼容接口（DeepSeek 等） -->
@@ -98,17 +100,17 @@
             <artifactId>langchain4j-open-ai</artifactId>
             <version>${langchain4j.version}</version>
         </dependency>
-        <!-- Redis 向量存储 -->
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-redis</artifactId>
-            <version>${langchain4j.version}</version>
-        </dependency>
         <!--本地 BGE 嵌入模型 -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-embeddings-bge-small-zh</artifactId>
             <version>${langchain4j.version}</version>
+        </dependency>
+
+        <!-- Elasticsearch -->
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-high-level-client</artifactId>
         </dependency>
 
         <!--hutool-->

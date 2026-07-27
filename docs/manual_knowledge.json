@@ -1,0 +1,72 @@
+[
+  {
+    "content": "Question: What is Spring Boot?\nAnswer: Spring Boot is an open-source Java-based framework built on top of the Spring Framework. It simplifies the creation of stand-alone, production-grade Spring applications with minimal configuration. By using convention-over-configuration, it eliminates boilerplate code and manual setup. Spring Boot applications can run without external application servers thanks to embedded Tomcat, Jetty, or Undertow.",
+    "courseId": 1,
+    "courseName": "Spring全家桶",
+    "chapterTitle": "Spring Boot入门",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What is auto-configuration in Spring Boot?\nAnswer: Auto-configuration is a core Spring Boot feature that automatically configures Spring beans and components based on the libraries present in the classpath. When Spring Boot detects specific frameworks like JPA, Hibernate, or Spring MVC, it configures the corresponding beans with sensible defaults. This is enabled via the @EnableAutoConfiguration annotation, which is part of the @SpringBootApplication annotation. Auto-configuration uses conditional annotations like @ConditionalOnClass to apply configuration only when certain conditions are met.",
+    "courseId": 1,
+    "courseName": "Spring全家桶",
+    "chapterTitle": "Spring Boot自动配置",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What are Spring Boot Starters?\nAnswer: Spring Boot Starters are convenient dependency descriptors that bundle commonly used libraries for specific functionality into a single Maven or Gradle dependency. Instead of managing multiple individual dependencies and version compatibility, developers add one starter. Key starters include: spring-boot-starter-web for Spring MVC with embedded Tomcat, spring-boot-starter-data-jpa for Spring Data JPA with Hibernate, spring-boot-starter-security for Spring Security, and spring-boot-starter-test for testing with JUnit and Mockito.",
+    "courseId": 1,
+    "courseName": "Spring全家桶",
+    "chapterTitle": "Spring Boot Starter",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What is Spring Boot Actuator?\nAnswer: Spring Boot Actuator adds production-ready monitoring and management capabilities to Spring Boot applications. It exposes information through HTTP endpoints such as /actuator/health for health checks, /actuator/metrics for application metrics, /actuator/loggers for log level management, and /actuator/info for application information. Actuator can show all beans in the application context, auto-configuration decisions, environment variables, memory usage, garbage collection statistics, and recent HTTP request traces.",
+    "courseId": 1,
+    "courseName": "Spring全家桶",
+    "chapterTitle": "Spring Boot Actuator",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: How to configure multiple datasources in Spring Boot?\nAnswer: To configure multiple datasources in Spring Boot: 1. Define datasource properties in application.yml with different prefixes for each datasource. 2. Create separate DataSource configuration classes for each datasource using @ConfigurationProperties. 3. Use @Primary annotation on the main datasource. 4. Configure separate EntityManagerFactory and TransactionManager beans for each datasource. 5. Use @EnableJpaRepositories with basePackages and entityManagerFactoryRef to map repositories to specific datasources.",
+    "courseId": 1,
+    "courseName": "Spring全家桶",
+    "chapterTitle": "Spring Boot配置",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What is dependency injection in Java?\nAnswer: Dependency Injection (DI) is a design pattern where objects receive their dependencies from an external source rather than creating them internally. In Spring, DI is implemented through the IoC (Inversion of Control) container. Dependencies can be injected via constructor injection, setter injection, or field injection. Constructor injection is generally preferred because it makes dependencies explicit, supports immutability with final fields, and facilitates unit testing. The @Autowired annotation marks where Spring should inject dependencies.",
+    "courseId": 2,
+    "courseName": "Java基础",
+    "chapterTitle": "面向对象与设计模式",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What are the main principles of Object-Oriented Programming?\nAnswer: The four main principles of OOP are: 1. Encapsulation: bundling data and methods within a class and restricting direct access to internal state through access modifiers like private, protected, and public. 2. Inheritance: allowing a class to inherit properties and methods from a parent class using the extends keyword. 3. Polymorphism: the ability of objects to take multiple forms, achieved through method overriding and method overloading. 4. Abstraction: hiding complex implementation details and exposing only essential features through abstract classes and interfaces.",
+    "courseId": 2,
+    "courseName": "Java基础",
+    "chapterTitle": "面向对象编程",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What is the difference between HashMap and TreeMap in Java?\nAnswer: HashMap and TreeMap are both implementations of the Map interface in Java. HashMap uses a hash table for storage, providing O(1) average time complexity for get and put operations, but does not maintain any order. TreeMap uses a Red-Black tree structure, providing O(log n) time complexity and maintains keys in sorted order according to their natural ordering or a custom Comparator. HashMap allows one null key and multiple null values, while TreeMap does not allow null keys. Use HashMap when order does not matter and you need maximum performance. Use TreeMap when you need sorted key traversal.",
+    "courseId": 2,
+    "courseName": "Java基础",
+    "chapterTitle": "集合框架",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What is JDBC and how do you connect to a database in Java?\nAnswer: JDBC (Java Database Connectivity) is a Java API that enables Java programs to execute SQL statements and interact with relational databases. To connect to a database: 1. Load the JDBC driver class using Class.forName() or let the DriverManager auto-detect it. 2. Use DriverManager.getConnection() with a JDBC URL, username, and password to establish a Connection. 3. Create a Statement or PreparedStatement object to execute SQL queries. 4. Call executeQuery() for SELECT statements (returns ResultSet) or executeUpdate() for INSERT, UPDATE, DELETE. 5. Iterate through the ResultSet to process results. 6. Always close Connection, Statement, and ResultSet in finally blocks or use try-with-resources.",
+    "courseId": 3,
+    "courseName": "数据库",
+    "chapterTitle": "JDBC数据库连接",
+    "sourceType": "QA"
+  },
+  {
+    "content": "Question: What is Redis and when should you use it?\nAnswer: Redis (Remote Dictionary Server) is an open-source, in-memory data structure store that can be used as a database, cache, message broker, and queue. It supports various data structures including strings, hashes, lists, sets, sorted sets, bitmaps, and streams. Redis is commonly used for: caching frequently accessed data to reduce database load, session management in web applications, real-time leaderboards and counting with sorted sets, pub/sub messaging for real-time notifications, rate limiting for API endpoints, and distributed locking. Redis data is stored in memory, providing sub-millisecond latency, but can also be persisted to disk for durability.",
+    "courseId": 3,
+    "courseName": "数据库",
+    "chapterTitle": "Redis缓存",
+    "sourceType": "QA"
+  }
+]

@@ -1,0 +1,8 @@
+# 天机 Agent 同义词词典
+# 格式: 原始词 => 标准词
+# 用法: bash docs/sync_synonyms.sh
+SpringBoot => Spring Boot
+springboot => Spring Boot
+mybatis => MyBatis
+tomcat => Tomcat
+多数据源 => 多数据源配置

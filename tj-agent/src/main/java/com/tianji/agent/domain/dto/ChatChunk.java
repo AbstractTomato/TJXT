@@ -29,4 +29,6 @@ public class ChatChunk {
 
     /** 引用的知识来源（仅在 finished=true 时填充） */
     private String sources;
+
+    private String sessionId;
 }

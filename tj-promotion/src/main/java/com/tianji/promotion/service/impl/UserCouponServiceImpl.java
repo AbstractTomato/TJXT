@@ -22,19 +22,15 @@ import com.tianji.promotion.service.IExchangeCodeService;
 import com.tianji.promotion.service.IUserCouponService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.tianji.promotion.utils.CodeUtil;
-import com.tianji.promotion.utils.MyLock;
-import com.tianji.promotion.utils.RedisLock;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.aop.framework.AopContext;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 

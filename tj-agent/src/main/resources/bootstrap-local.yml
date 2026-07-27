@@ -8,9 +8,10 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8848
+        server-addr: 192.168.150.101:8848
+        ip: 192.168.150.1
       config:
-        server-addr: 127.0.0.1:8848
+        server-addr: 192.168.150.101:8848
         file-extension: yaml
         shared-configs:
           - data-id: shared-spring.yaml
@@ -28,10 +29,12 @@ spring:
           - data-id: shared-xxljob.yaml
             refresh: false
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/tj_agent?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    url: jdbc:mysql://192.168.150.101:3306/tj_agent?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
     username: root
-    password: root
+    password: 123
     driver-class-name: com.mysql.cj.jdbc.Driver
+  elasticsearch:
+    uris: http://192.168.150.101:9200
 
 tj:
   agent:
@@ -42,3 +45,6 @@ tj:
       temperature: 0.3
       max-tokens: 2048
       timeout: 60
+    sync:
+      # 需要同步的课程 ID 列表（逗号分隔），根据实际数据修改
+      course-ids: 1,2,3

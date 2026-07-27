@@ -1,7 +1,7 @@
 package com.tianji.agent.config;
 
-import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import dev.langchain4j.model.embedding.onnx.bgesmallzh.BgeSmallZhEmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -39,11 +39,14 @@ public class AgentConfig {
     private Long timeout = 60L;
 
     /**
-     * 对话模型 Bean
+     * 流式对话模型 Bean（Phase 4 使用）。
+     * <p>
+     * 用于 SSE 流式输出，通过 {@code StreamingResponseHandler} 回调
+     * 逐 token 推送到前端。API 兼容所有 OpenAI 接口的模型服务。
      */
     @Bean
-    public OpenAiChatModel chatModel() {
-        return OpenAiChatModel.builder()
+    public OpenAiStreamingChatModel streamingChatModel() {
+        return OpenAiStreamingChatModel.builder()
                 .baseUrl(baseUrl)
                 .apiKey(apiKey)
                 .modelName(modelName)
@@ -58,18 +61,11 @@ public class AgentConfig {
     /**
      * 嵌入模型 Bean（将文本转成向量）
      * <p>
-     * 如果 baseUrl 指向的模型服务不支持 embedding（如 DeepSeek），
-     * 可以换成 langchain4j-embeddings-bge-small-zh 本地模型，无需额外配置。
+     * 使用本地 BGE-small-zh 模型（768 维），纯 CPU 推理，无网络依赖。
+     * 首次启动会自动下载模型文件（约 60MB），后续使用本地缓存。
      */
     @Bean
-    public OpenAiEmbeddingModel embeddingModel() {
-        return OpenAiEmbeddingModel.builder()
-                .baseUrl(baseUrl)
-                .apiKey(apiKey)
-                .modelName("text-embedding-ada-002")
-                .timeout(Duration.ofSeconds(timeout))
-                .logRequests(true)
-                .logResponses(true)
-                .build();
+    public BgeSmallZhEmbeddingModel embeddingModel() {
+        return new BgeSmallZhEmbeddingModel();
     }
 }

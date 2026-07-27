@@ -15,3 +15,7 @@ target
 .project
 logs
 job
+
+# 敏感配置文件（含 API key、数据库密码等，不要提交）
+  tj-agent/src/main/resources/bootstrap.yml
+  tj-agent/src/main/resources/bootstrap-dev.yml

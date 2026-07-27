@@ -1,0 +1,196 @@
+# Phase 2 部署问题总结
+
+> 日期：2026-07-20  
+> 模块：tj-agent（天机 Agent 智能助手）  
+> 目标：将知识库构建相关代码部署到虚拟机 Docker 环境
+
+---
+
+## 环境概览
+
+| 组件 | 地址 | 说明 |
+|------|------|------|
+| 虚拟机 | 192.168.150.101 | VMware，Docker 20.10.8 |
+| MySQL | 192.168.150.101:3306 | root/123 |
+| Redis | 192.168.150.101:6379 | 密码 123321 |
+| Elasticsearch | 192.168.150.101:9200 | 7.12.1 |
+| Nacos | 192.168.150.101:8848 | 2.1.0-slim（修复后） |
+| XXL-Job | 192.168.150.101:8880 | 2.3.0 |
+
+---
+
+## 问题清单（共 12 个）
+
+### 问题 1：langchain4j-spring-boot-starter 与 Spring Boot 2.7.2 不兼容
+
+**现象**：应用启动时报 `AbstractMethodError: AiServiceScannerProcessor does not define or inherit postProcessBeanFactory`
+
+**根因**：`langchain4j-spring-boot-starter 0.36.2` 是为 Spring Boot 3.x 编译的，其 `BeanFactoryPostProcessor` 接口方法签名与 Spring Boot 2.7.2（基于 Spring Framework 5.3）不兼容。
+
+**解决方案**：移除 `langchain4j-spring-boot-starter` 依赖，改为手动配置所有 LangChain4j Bean。添加了显式的 `langchain4j-core` 依赖。
+
+**文件**：`tj-agent/pom.xml`
+
+---
+
+### 问题 2：BgeSmallZhEmbeddingModel 类路径错误
+
+**现象**：编译失败，`找不到符号: 类 BgeSmallZhEmbeddingModel`
+
+**根因**：该类在 `langchain4j-embeddings-bge-small-zh 0.36.2` 中的实际包名为 `dev.langchain4j.model.embedding.onnx.bgesmallzh.BgeSmallZhEmbeddingModel`，而非 `dev.langchain4j.model.embedding.BgeSmallZhEmbeddingModel`。
+
+**解决方案**：修正 import 路径。
+
+**文件**：`tj-agent/src/main/java/com/tianji/agent/config/AgentConfig.java`
+
+---
+
+### 问题 3：RedisEmbeddingStore Builder API 不匹配
+
+**现象**：编译失败，`找不到符号: 类 RedisEmbeddingStoreBuilder`
+
+**根因**：langchain4j-redis 0.36.2 的 Builder 类名为 `RedisEmbeddingStore.Builder`（不是 `RedisEmbeddingStoreBuilder`），且 `port()` 和 `dimension()` 方法接受 `Integer` 类型（不是 `int`）。
+
+**解决方案**：修正 Builder 类型和方法参数类型。
+
+**文件**：`tj-agent/src/main/java/com/tianji/agent/config/RedisVectorStoreConfig.java`
+
+---
+
+### 问题 4：Redis 缺少 RediSearch 模块
+
+**现象**：虚拟机 Docker 无法拉取 `redis/redis-stack-server` 镜像（Docker Hub 被墙）。
+
+**根因**：虚拟机外网受限，无法从 Docker Hub 拉取镜像。现有的 `redis` 镜像不包含 RediSearch 模块。`langchain4j-redis` 的向量存储依赖 `FT.CREATE` 等 RediSearch 命令。
+
+**解决方案**：放弃 langchain4j-redis，自建 `SimpleRedisVectorStore`，将 768 维 float 向量用 Base64 编码后存为 Redis String。Phase 3 检索时通过 Java 端暴力计算余弦相似度（适用于 < 10000 条向量的规模）。
+
+**新建文件**：`tj-agent/src/main/java/com/tianji/agent/config/SimpleRedisVectorStore.java`
+
+---
+
+### 问题 5：BGE 模型启动时 OOM
+
+**现象**：应用启动时 `java.lang.OutOfMemoryError: Java heap space`
+
+**根因**：BGE-small-zh 模型需要约 1.5-2GB 堆内存来加载 ONNX 模型（模型文件约 60MB，运行时常驻内存约 1GB+）。初始配置仅分配 1GB 内存。
+
+**解决方案**：
+1. Docker 容器内存提升至 3GB（`Memory: 3221225472`）
+2. JVM 参数 `-Xmx2g -Xms512m`
+3. 创建 `EmbeddingWarmup` 组件在应用启动时预热模型
+
+**新建文件**：`tj-agent/src/main/java/com/tianji/agent/config/EmbeddingWarmup.java`
+
+---
+
+### 问题 6：JDK 版本不匹配
+
+**现象**：VM 上的 Docker 只有 `openjdk:11.0-jre-buster` 镜像，没有 JDK 17。langchain4j 所有模块的 class 文件主版本号均为 61（JDK 17）。
+
+**根因**：`tj-agent/pom.xml` 指定 `<maven.compiler.target>17</maven.compiler.target>`，且 langchain4j 依赖库均需 JDK 17 运行。VM 无法从 Docker Hub 拉取新镜像。
+
+**解决方案**：
+1. 从清华镜像（`mirrors.tuna.tsinghua.edu.cn`）下载 OpenJDK 17 JRE（45MB）
+2. 通过 Docker API 在容器内下载并解压到 `/opt/java/jdk-17.0.19+10-jre`
+3. 多次迭代（commit → upload new jar → recommit）构建最终镜像
+
+**新建文件**：`tj-agent/Dockerfile`（JDK 17 基础镜像构建文件）
+
+---
+
+### 问题 7：Feign 客户端重复注册
+
+**现象**：`The bean 'auth-service.FeignClientSpecification' could not be registered. A bean with that name has already been defined`
+
+**根因**：`@EnableFeignClients` 扫描 `com.tianji.api.client` 包时，`tj-auth-resource-sdk` 也定义了同名的 Feign 客户端，导致 Bean 名冲突。
+
+**解决方案**：在 `bootstrap.yml` 添加 `spring.main.allow-bean-definition-overriding: true`。
+
+**文件**：`tj-agent/src/main/resources/bootstrap.yml`
+
+---
+
+### 问题 8：缺少 @EnableFeignClients 注解
+
+**现象**：应用启动时 `ChatController` 注入失败，因为 `CourseClient`、`LearningClient` 等 Feign Bean 未被创建。
+
+**根因**：`AgentApplication` 未添加 `@EnableFeignClients` 注解，Spring 不会扫描 `@FeignClient` 接口。
+
+**解决方案**：添加 `@EnableFeignClients(basePackages = "com.tianji.api.client")`。
+
+**文件**：`tj-agent/src/main/java/com/tianji/agent/AgentApplication.java`
+
+---
+
+### 问题 9：Swagger/Springfox 兼容性
+
+**现象**：`Failed to start bean 'documentationPluginsBootstrapper': NullPointerException: "this.condition" is null`
+
+**根因**：Springfox 与 Spring Boot 2.7 的路径匹配策略不兼容。Spring Boot 2.7 默认使用 `path_pattern_parser`，而 Springfox 需要 `ant_path_matcher`。
+
+**解决方案**：添加配置 `spring.mvc.pathmatch.matching-strategy=ant_path_matcher`。
+
+**文件**：`tj-agent/src/main/resources/bootstrap.yml`
+
+---
+
+### 问题 10：Docker 端口映射不生效
+
+**现象**：容器内部 Tomcat 监听 `0.0.0.0:8100`，但宿主机访问 `192.168.150.101:8100` 返回 `Connection refused`。
+
+**根因**：Docker API 创建容器时，`PortBindings` 配置了但没有同时配置 `ExposedPorts`，导致端口未真正映射。
+
+**解决方案**：同时添加 `"ExposedPorts": {"8100/tcp": {}}` 和 `"PortBindings": {"8100/tcp": [{"HostPort": "8100"}]}`。
+
+---
+
+### 问题 11：Nacos 无法启动
+
+**现象**：Nacos 容器 `Status: running` 但不监听 8848 端口。日志显示 JDBC 异常：`ExternalStoragePersistServiceImpl.findConfigMaxId`
+
+**根因**：Nacos slim 镜像被错误配置为使用外部 MySQL（`MYSQL_SERVICE_HOST=192.168.150.101`），但：
+1. MySQL 8 的 `caching_sha2_password` 认证插件与 Nacos 内置的旧版 JDBC 驱动不兼容
+2. Nacos 的 `schema.sql` 包含 Oracle/Derby 特有的 SQL 语法（`CREATE SCHEMA ... AUTHORIZATION`、`GENERATED BY DEFAULT AS IDENTITY`），无法在 MySQL 8 上执行
+
+**解决方案**：
+1. 删除旧 Nacos 容器
+2. 重建时移除 `MYSQL_SERVICE_*` 和 `SPRING_DATASOURCE_PLATFORM` 环境变量，使用内置 Derby 数据库
+3. 在 Nacos 中创建 `shared-redis.yaml`、`shared-mybatis.yaml`、`shared-xxljob.yaml` 三个共享配置
+
+**注意**：其他微服务（tj-course、tj-learning 等）在 Nacos 不可用时通过本地缓存和 Fallback 机制运行，重建 Nacos 不影响它们。
+
+---
+
+### 问题 12：tj-api 编译失败（MyBatis-Plus Page 类找不到）
+
+**现象**：`tj-api` 编译时 `LearningClientFallback.java:35` 报错 `找不到 com.baomidou.mybatisplus.extension.plugins.pagination.Page`
+
+**根因**：`PageDTO.empty(Long, Long)` 方法使用了 `CollUtils.emptyList()`，不依赖 `Page` 类。但编译器解析 `PageDTO` 时，其另一个重载 `PageDTO.empty(Page<?>)` 引用了 `com.baomidou.mybatisplus.extension.plugins.pagination.Page`。该依赖在 `tj-common` 中声明，但未正确传递到 `tj-api` 的编译 classpath。
+
+**解决方案**：将 `PageDTO.empty(0L, 0L)` 替换为 `new PageDTO<>(0L, 0L, Collections.emptyList())`，避免触发编译器的重载解析。
+
+**文件**：`tj-api/src/main/java/com/tianji/api/client/learning/fallback/LearningClientFallback.java`
+
+---
+
+## 关键设计决策
+
+| 决策 | 原因 |
+|------|------|
+| 自建 SimpleRedisVectorStore | VM 无法拉取 Redis Stack 镜像，Redis 无 RediSearch 模块 |
+| Nacos 使用内置 Derby | MySQL 8 认证插件与 Nacos JDBC 驱动不兼容 |
+| 环境变量直连中间件 | Nacos 未就绪时的降级方案 |
+| JDK 17 自建镜像 | VM 无 JDK 17 镜像且无法拉取 Docker Hub |
+
+## 最终配置
+
+tj-agent 容器通过 **Nacos 共享配置** + **环境变量覆盖** 的方式运行：
+
+- 数据库：`jdbc:mysql://mysql:3306/tj_agent`（Docker 网络 DNS）
+- Redis：`redis:6379`（密码 123321）
+- ES：`http://es:9200`
+- LLM：DeepSeek V4 Pro（API Key 通过环境变量注入）
+- Nacos：`nacos:8848`（Docker 网络 DNS）
+- 嵌入模型：BGE-small-zh 本地模型（768 维，运行内存 ~2GB）
+- 向量存储：SimpleRedisVectorStore（Base64 编码，不依赖 RediSearch）
